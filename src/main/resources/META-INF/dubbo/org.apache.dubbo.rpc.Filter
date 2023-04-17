@@ -1,0 +1,2 @@
+fistDubboProvider=org.chad.notFound.rpc.provider.FistDubboProviderFilter
+fistDubboConsumer=org.chad.notFound.rpc.consumer.FistDubboConsumerFilter
