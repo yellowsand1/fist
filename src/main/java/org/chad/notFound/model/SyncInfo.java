@@ -3,7 +3,7 @@ package org.chad.notFound.model;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.chad.notFound.configuration.FistProperties;
-import org.chad.notFound.configuration.SpringContextHolder;
+import org.chad.notFound.configuration.FistSpringContextHolder;
 
 import java.util.List;
 
@@ -27,6 +27,6 @@ public class SyncInfo {
     private Integer servicePort;
 
     public SyncInfo() {
-        this.servicePort = SpringContextHolder.getBean(FistProperties.class).getPort();
+        this.servicePort = FistSpringContextHolder.getBean(FistProperties.class).getPort();
     }
 }

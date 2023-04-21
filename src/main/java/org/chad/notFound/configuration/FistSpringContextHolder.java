@@ -27,15 +27,15 @@ import java.util.Map;
  * @author hyl
  * @date 2023/04/04
  */
-public class SpringContextHolder implements ApplicationContextAware, EmbeddedValueResolverAware {
+public class FistSpringContextHolder implements ApplicationContextAware, EmbeddedValueResolverAware {
     private static ApplicationContext applicationContext = null;
     private static StringValueResolver stringValueResolver;
 
-    public SpringContextHolder() {
+    public FistSpringContextHolder() {
     }
 
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        SpringContextHolder.applicationContext = applicationContext;
+        FistSpringContextHolder.applicationContext = applicationContext;
     }
 
     public static Map<String, Object> getBeansWithAnnotation(Class<? extends Annotation> annotationType) {
@@ -180,7 +180,7 @@ public class SpringContextHolder implements ApplicationContextAware, EmbeddedVal
     }
 
     public void setEmbeddedValueResolver(StringValueResolver stringValueResolver) {
-        SpringContextHolder.stringValueResolver = stringValueResolver;
+        FistSpringContextHolder.stringValueResolver = stringValueResolver;
     }
 
     public static String getSchemeAndHost() {

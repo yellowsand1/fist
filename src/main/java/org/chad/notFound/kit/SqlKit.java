@@ -1,7 +1,7 @@
 package org.chad.notFound.kit;
 
 import org.chad.notFound.configuration.FistProperties;
-import org.chad.notFound.configuration.SpringContextHolder;
+import org.chad.notFound.configuration.FistSpringContextHolder;
 import org.chad.notFound.model.RollBackSql;
 import org.chad.notFound.model.db.MetaData;
 
@@ -41,12 +41,14 @@ public class SqlKit {
     private static final String PASSWORD;
 
     static {
-        FistProperties fistProperties = SpringContextHolder.getBean(FistProperties.class);
+        FistProperties fistProperties = FistSpringContextHolder.getBean(FistProperties.class);
         URL = fistProperties.getFistTargetDatabaseUrl();
         USERNAME = fistProperties.getFistTargetDatabaseUsername();
         PASSWORD = fistProperties.getFistTargetDatabasePassword();
     }
+
     public static final ThreadLocal<String> CLOSEABLE = new ThreadLocal<>();
+
     /**
      * To generate rollback sql for update
      *
@@ -106,7 +108,7 @@ public class SqlKit {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             CLOSEABLE.remove();
         }
         return rollBackSql;
@@ -219,7 +221,7 @@ public class SqlKit {
             params.add(param);
         } catch (SQLException e) {
             throw new RuntimeException(e);
-        }finally {
+        } finally {
             CLOSEABLE.remove();
         }
         return rollBackSql;
@@ -273,7 +275,7 @@ public class SqlKit {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        }finally {
+        } finally {
             CLOSEABLE.remove();
         }
         return rollBackSql;
@@ -288,7 +290,7 @@ public class SqlKit {
     private static String getUpdateSqlTableName(String sql) {
         int index = Math.max(sql.indexOf(UPDATE), sql.indexOf(UPDATE.toUpperCase()));
         int start = index + UPDATE.length();
-        return skipSpace(sql, start);
+        return skipSpace(sql, start).replaceAll("`", "").split("\\.")[0];
     }
 
     /**
@@ -300,7 +302,7 @@ public class SqlKit {
     private static String getInsertSqlTableName(String sql) {
         int index = Math.max(sql.indexOf(INTO), sql.indexOf(INTO.toUpperCase()));
         int start = index + INTO.length();
-        return skipSpace(sql, start);
+        return skipSpace(sql, start).replaceAll("`", "").split("\\.")[0];
     }
 
     /**
@@ -312,7 +314,7 @@ public class SqlKit {
     private static String getDeleteSqlTableName(String sql) {
         int index = Math.max(sql.indexOf(FROM), sql.indexOf(FROM.toUpperCase()));
         int start = index + FROM.length();
-        return skipSpace(sql, start);
+        return skipSpace(sql, start).replaceAll("`", "").split("\\.")[0];
     }
 
     /**
@@ -323,14 +325,14 @@ public class SqlKit {
      * @return {@link String}
      */
     private static String skipSpace(String sql, int start) {
-        while (start < sql.length() && sql.charAt(start) != ' ') {
+        while (start < sql.length() && (sql.charAt(start) == ' ' || sql.charAt(start) == '(' || sql.charAt(start) == ')')) {
             start++;
         }
-        int l = start + 1;
-        while (l < sql.length() && sql.charAt(l) != ' ') {
+        int l = start+1;
+        while (l < sql.length() && sql.charAt(l) != ' ' && sql.charAt(l) != '(' && sql.charAt(start) != ')') {
             l++;
         }
-        return sql.substring(start + 1, l);
+        return sql.substring(start, l);
     }
 
     /**

@@ -3,8 +3,11 @@ package org.chad.notFound.configuration;
 import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.aop.JdbcConnectionAspect;
 import org.chad.notFound.applicationRunner.DbMetaDataApplicationRunner;
+import org.chad.notFound.controller.FistController;
 import org.chad.notFound.rpc.consumer.TraceFilter;
 import org.chad.notFound.rpc.provider.RestTemplateRpcAspect;
+import org.chad.notFound.service.IFistCoreService;
+import org.chad.notFound.service.impl.FistCoreServiceImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,8 +35,8 @@ public class FistConfiguration {
     }
 
     @Bean
-    public SpringContextHolder springContextHolder() {
-        return new SpringContextHolder();
+    public FistSpringContextHolder fistSpringContextHolder() {
+        return new FistSpringContextHolder();
     }
 
     @Bean
@@ -55,5 +58,15 @@ public class FistConfiguration {
     @ConditionalOnProperty(name = "fist.rpc.restTemplate.enable", havingValue = "true")
     public RestTemplateRpcAspect restTemplateRpcAspect() {
         return new RestTemplateRpcAspect();
+    }
+
+    @Bean
+    public IFistCoreService fistCoreService() {
+        return new FistCoreServiceImpl();
+    }
+
+    @Bean
+    public FistController fistController() {
+        return new FistController();
     }
 }

@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.datasource.DataSourceUtils;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.sql.DataSource;
@@ -39,7 +38,6 @@ import java.util.stream.Collectors;
  * @Description: core service impl
  * @Version: 1.0
  */
-@Service
 @Slf4j
 public class FistCoreServiceImpl implements IFistCoreService {
     private FistProperties fistProperties;

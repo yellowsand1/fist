@@ -1,5 +1,6 @@
 package org.chad.notFound.applicationRunner;
 
+import lombok.extern.slf4j.Slf4j;
 import org.chad.notFound.configuration.FistProperties;
 import org.chad.notFound.constant.FistConstant;
 import org.chad.notFound.model.db.Column;
@@ -23,6 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 
 @Order(FistConstant.FIST_RUNNER_ORDER)
+@Slf4j
 public class DbMetaDataApplicationRunner implements ApplicationRunner {
     private FistProperties fistProperties;
 
@@ -33,12 +35,14 @@ public class DbMetaDataApplicationRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+        long l = System.currentTimeMillis();
+        log.debug("fist start to run configurations !");
         String url = fistProperties.getFistTargetDatabaseUrl();
         String username = fistProperties.getFistTargetDatabaseUsername();
         String password = fistProperties.getFistTargetDatabasePassword();
         try (Connection conn = DriverManager.getConnection(url, username, password)) {
             DatabaseMetaData metaData = conn.getMetaData();
-            ResultSet tables = metaData.getTables(null, null, null, new String[]{"TABLE"});
+            ResultSet tables = metaData.getTables(getTableNameFromUrl(), null, null, new String[]{"TABLE"});
             while (tables.next()) {
                 Table table = new Table();
                 String tableName = tables.getString("TABLE_NAME");
@@ -62,6 +66,15 @@ public class DbMetaDataApplicationRunner implements ApplicationRunner {
             }
         } catch (SQLException e) {
             e.printStackTrace();
+        } finally {
+            log.debug("fist configuration finish , costs {} ms", System.currentTimeMillis() - l);
         }
+    }
+    private String getTableNameFromUrl(){
+        String url = fistProperties.getFistTargetDatabaseUrl();
+        String[] split = url.split("/");
+        String last = split[3];
+        String[] split1 = last.split("\\?");
+        return split1[0];
     }
 }

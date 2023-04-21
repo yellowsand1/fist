@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @BelongsProject: fistProject
@@ -29,6 +30,7 @@ import java.util.UUID;
  */
 @Order(FistConstant.FIST_FILTER_ORDER)
 public class TraceFilter extends OncePerRequestFilter {
+    AtomicInteger counter = new AtomicInteger(0);
 
 
     @Override
@@ -50,6 +52,8 @@ public class TraceFilter extends OncePerRequestFilter {
             //because I send everything I need to the rust server
             GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.remove();
             JdbcConnectionAspect.SQL_LIST.remove();
+            counter.incrementAndGet();
+            System.out.println(counter.get());
         }
     }
 }
