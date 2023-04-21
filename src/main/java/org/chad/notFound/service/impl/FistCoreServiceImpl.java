@@ -31,8 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
@@ -80,7 +78,6 @@ public class FistCoreServiceImpl implements IFistCoreService {
         syncInfo.setEnd(FistThreadLocal.BASE.get() == null || FistThreadLocal.BASE.get());
         syncInfo.setFistId(FistThreadLocal.TRACE_ID.get());
         //Now I guess it's time to send the syncInfo to rust server
-//        executorService.submit(() -> send(syncInfo));
         asyncSend(syncInfo);
     }
 
@@ -168,8 +165,15 @@ public class FistCoreServiceImpl implements IFistCoreService {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-
-        HttpClient.create().headers(httpHeaders -> headers.forEach(httpHeaders::set)).post().uri(fistServerAddr).send(ByteBufFlux.fromString(Mono.just(json))).responseContent().aggregate().asString().subscribe(response -> {
+        HttpClient.create()
+                .headers(httpHeaders -> headers.forEach(httpHeaders::set))
+                .post()
+                .uri(fistServerAddr)
+                .send(ByteBufFlux.fromString(Mono.just(json)))
+                .responseContent()
+                .aggregate()
+                .asString()
+                .subscribe(response -> {
             log.debug("async send info to fist server success, response: {}", response);
         });
     }
