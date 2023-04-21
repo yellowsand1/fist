@@ -6,6 +6,7 @@ import org.chad.notFound.model.SyncInfo;
 import org.chad.notFound.model.vo.CallBack;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * core service
@@ -28,14 +29,16 @@ public interface IFistCoreService {
      *
      * @param syncInfo syncInfo
      */
+    @Deprecated
     void send(SyncInfo syncInfo);
 
     /**
      * deal with the callback from rust server
      *
      * @param callBack callBack
+     * @return {@link CompletableFuture}<{@link Void}>
      */
-    void dealCallBack(CallBack callBack);
+    CompletableFuture<Void> dealCallBack(CallBack callBack);
 
     /**
      * execute the rollback sql
@@ -43,4 +46,11 @@ public interface IFistCoreService {
      * @param rollBackSql rollBackSql
      */
     void executeRollBack(RollBackSql rollBackSql);
+
+    /**
+     * async send the info of transaction to rust server now
+     *
+     * @param syncInfo 同步信息
+     */
+    void asyncSend(SyncInfo syncInfo);
 }

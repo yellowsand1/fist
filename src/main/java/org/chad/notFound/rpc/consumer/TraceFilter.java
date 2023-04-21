@@ -30,8 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Order(FistConstant.FIST_FILTER_ORDER)
 public class TraceFilter extends OncePerRequestFilter {
-    AtomicInteger counter = new AtomicInteger(0);
-
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -52,8 +50,6 @@ public class TraceFilter extends OncePerRequestFilter {
             //because I send everything I need to the rust server
             GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.remove();
             JdbcConnectionAspect.SQL_LIST.remove();
-            counter.incrementAndGet();
-            System.out.println(counter.get());
         }
     }
 }

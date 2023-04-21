@@ -17,7 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.client.RestTemplate;
+import reactor.core.publisher.Mono;
+import reactor.netty.ByteBufFlux;
+import reactor.netty.http.client.HttpClient;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -26,6 +30,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -59,8 +64,6 @@ public class FistCoreServiceImpl implements IFistCoreService {
         this.restTemplate = restTemplate;
     }
 
-    private static final ExecutorService executorService = Executors.newFixedThreadPool(10);
-
     /**
      * process sql
      *
@@ -77,15 +80,16 @@ public class FistCoreServiceImpl implements IFistCoreService {
         syncInfo.setEnd(FistThreadLocal.BASE.get() == null || FistThreadLocal.BASE.get());
         syncInfo.setFistId(FistThreadLocal.TRACE_ID.get());
         //Now I guess it's time to send the syncInfo to rust server
-        executorService.submit(() -> send(syncInfo));
-//        send(syncInfo);
+//        executorService.submit(() -> send(syncInfo));
+        asyncSend(syncInfo);
     }
 
     /**
-     * send the info of transaction to rust server now
+     * sync send the info of transaction to rust server now
      *
      * @param syncInfo syncInfo
      */
+    @Deprecated
     @Override
     public void send(SyncInfo syncInfo) {
         String fistServerAddr = "http://" + fistProperties.getFistServerAddr() + ":" + fistProperties.getFistServerPort() + FistConstant.FIST_SERVER_PATH;
@@ -108,14 +112,16 @@ public class FistCoreServiceImpl implements IFistCoreService {
      *
      * @param callBack callBack
      */
+    @Async
     @Override
-    public void dealCallBack(CallBack callBack) {
+    public CompletableFuture<Void> dealCallBack(CallBack callBack) {
         long l = System.currentTimeMillis();
         log.debug("roll back demand from fist server,fistId: {}", callBack.getFistId());
         for (RollBackSql rollBackSql : callBack.getRollBackSql()) {
             executeRollBack(rollBackSql);
         }
         log.debug("roll back success,cost: {} ms", System.currentTimeMillis() - l);
+        return CompletableFuture.completedFuture(null);
     }
 
     public static final ThreadLocal<String> ROLLBACK = new ThreadLocal<>();
@@ -142,6 +148,30 @@ public class FistCoreServiceImpl implements IFistCoreService {
         } finally {
             ROLLBACK.remove();
         }
+    }
+
+    /**
+     * async send the info of transaction to rust server now
+     *
+     * @param syncInfo syncInfo
+     */
+    @Override
+    public void asyncSend(SyncInfo syncInfo) {
+        String fistServerAddr = "http://" + fistProperties.getFistServerAddr() + ":" + fistProperties.getFistServerPort() + FistConstant.FIST_SERVER_PATH;
+        HttpHeaders headers = getHeaders();
+        Map<String, SyncInfo> body = new HashMap<>(1);
+        body.put("syncInfo", syncInfo);
+        JsonMapper mapper = new JsonMapper();
+        String json;
+        try {
+            json = mapper.writeValueAsString(body);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        HttpClient.create().headers(httpHeaders -> headers.forEach(httpHeaders::set)).post().uri(fistServerAddr).send(ByteBufFlux.fromString(Mono.just(json))).responseContent().aggregate().asString().subscribe(response -> {
+            log.debug("async send info to fist server success, response: {}", response);
+        });
     }
 
     /**
