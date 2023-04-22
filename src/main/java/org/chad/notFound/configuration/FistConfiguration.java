@@ -1,9 +1,11 @@
 package org.chad.notFound.configuration;
 
+import feign.RequestInterceptor;
 import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.aop.JdbcConnectionAspect;
 import org.chad.notFound.applicationRunner.DbMetaDataApplicationRunner;
 import org.chad.notFound.rpc.consumer.TraceFilter;
+import org.chad.notFound.rpc.provider.FistFeignInterceptor;
 import org.chad.notFound.rpc.provider.RestTemplateRpcAspect;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -56,8 +58,14 @@ public class FistConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "fist.rpc.restTemplate.enable", havingValue = "true")
+    @ConditionalOnProperty(name = "fist.rpc.enable.restTemplate.", havingValue = "true")
     public RestTemplateRpcAspect restTemplateRpcAspect() {
         return new RestTemplateRpcAspect();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "fist.rpc.enable.feign", havingValue = "true")
+    public RequestInterceptor fistFeignInterceptor() {
+        return new FistFeignInterceptor();
     }
 }

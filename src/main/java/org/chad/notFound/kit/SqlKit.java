@@ -121,7 +121,7 @@ public class SqlKit {
      * @param columnDataTypes columnDataTypes
      * @param param           param
      * @param key             key
-     * @throws SQLException sqlexception异常
+     * @throws SQLException sqlexception
      */
     private static void predicateDataType(ResultSet rs, Map<String, Integer> columnDataTypes, List<Object> param, String key) throws SQLException {
         int dataType = columnDataTypes.get(key);
@@ -290,7 +290,11 @@ public class SqlKit {
     private static String getUpdateSqlTableName(String sql) {
         int index = Math.max(sql.indexOf(UPDATE), sql.indexOf(UPDATE.toUpperCase()));
         int start = index + UPDATE.length();
-        return skipSpace(sql, start).replaceAll("`", "").split("\\.")[0];
+        String[] wholeName = skipSpace(sql, start).replaceAll("`", "").split("\\.");
+        if (wholeName.length > 1) {
+            return wholeName[1];
+        }
+        return wholeName[0];
     }
 
     /**
@@ -302,7 +306,11 @@ public class SqlKit {
     private static String getInsertSqlTableName(String sql) {
         int index = Math.max(sql.indexOf(INTO), sql.indexOf(INTO.toUpperCase()));
         int start = index + INTO.length();
-        return skipSpace(sql, start).replaceAll("`", "").split("\\.")[0];
+        String[] wholeName = skipSpace(sql, start).replaceAll("`", "").split("\\.");
+        if (wholeName.length > 1) {
+            return wholeName[1];
+        }
+        return wholeName[0];
     }
 
     /**
@@ -314,21 +322,25 @@ public class SqlKit {
     private static String getDeleteSqlTableName(String sql) {
         int index = Math.max(sql.indexOf(FROM), sql.indexOf(FROM.toUpperCase()));
         int start = index + FROM.length();
-        return skipSpace(sql, start).replaceAll("`", "").split("\\.")[0];
+        String[] wholeName = skipSpace(sql, start).replaceAll("`", "").split("\\.");
+        if (wholeName.length > 1) {
+            return wholeName[1];
+        }
+        return wholeName[0];
     }
 
     /**
      * skip space to get read context
      *
      * @param sql   sql
-     * @param start 开始
+     * @param start start
      * @return {@link String}
      */
     private static String skipSpace(String sql, int start) {
         while (start < sql.length() && (sql.charAt(start) == ' ' || sql.charAt(start) == '(' || sql.charAt(start) == ')')) {
             start++;
         }
-        int l = start+1;
+        int l = start + 1;
         while (l < sql.length() && sql.charAt(l) != ' ' && sql.charAt(l) != '(' && sql.charAt(start) != ')') {
             l++;
         }
@@ -362,7 +374,7 @@ public class SqlKit {
      * @return {@link List}<{@link String}>
      */
     private static Map<String, String> getPrimaryKeyValues(String sql, List<String> primaryKeys) {
-        Map<String, String> map = new HashMap<>();
+        Map<String, String> map = new HashMap<>(1);
         for (String primaryKey : primaryKeys) {
             int t = sql.contains(primaryKey.toUpperCase()) ? sql.indexOf(primaryKey.toUpperCase()) : sql.indexOf(primaryKey.toLowerCase());
             int pos = 0;

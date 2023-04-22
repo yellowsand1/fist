@@ -14,12 +14,10 @@ import org.chad.notFound.model.vo.CallBack;
 import org.chad.notFound.service.IFistCoreService;
 import org.chad.notFound.threadLocal.FistThreadLocal;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
@@ -46,7 +44,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FistCoreServiceImpl implements IFistCoreService {
     private FistProperties fistProperties;
-    private RestTemplate restTemplate;
     private DataSource dataSource;
 
     @Autowired
@@ -57,11 +54,6 @@ public class FistCoreServiceImpl implements IFistCoreService {
     @Autowired
     public void setFistProperties(FistProperties fistProperties) {
         this.fistProperties = fistProperties;
-    }
-
-    @Autowired
-    public void setRestTemplate(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
     }
 
     /**
@@ -81,29 +73,6 @@ public class FistCoreServiceImpl implements IFistCoreService {
         syncInfo.setFistId(FistThreadLocal.TRACE_ID.get());
         //Now I guess it's time to send the syncInfo to rust server
         asyncSend(syncInfo);
-    }
-
-    /**
-     * sync send the info of transaction to rust server now
-     *
-     * @param syncInfo syncInfo
-     */
-    @Deprecated
-    @Override
-    public void send(SyncInfo syncInfo) {
-        String fistServerAddr = "http://" + fistProperties.getFistServerAddr() + ":" + fistProperties.getFistServerPort() + FistConstant.FIST_SERVER_PATH;
-        HttpHeaders headers = getHeaders();
-        Map<String, SyncInfo> body = new HashMap<>(1);
-        body.put("syncInfo", syncInfo);
-        JsonMapper mapper = new JsonMapper();
-        String json;
-        try {
-            json = mapper.writeValueAsString(body);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        HttpEntity entity = new HttpEntity(json, headers);
-        restTemplate.postForObject(fistServerAddr, entity, String.class);
     }
 
     /**
@@ -176,8 +145,8 @@ public class FistCoreServiceImpl implements IFistCoreService {
                 .aggregate()
                 .asString()
                 .subscribe(response -> {
-            log.debug("async send info to fist server success, response: {}", response);
-        });
+                    log.debug("async send info to fist server success, response: {}", response);
+                });
     }
 
     /**

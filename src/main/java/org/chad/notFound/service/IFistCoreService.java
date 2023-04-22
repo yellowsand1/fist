@@ -25,14 +25,6 @@ public interface IFistCoreService {
     void recordSql(List<Sql> sql, Throwable thrown);
 
     /**
-     * send the info of transaction to rust server now
-     *
-     * @param syncInfo syncInfo
-     */
-    @Deprecated
-    void send(SyncInfo syncInfo);
-
-    /**
      * deal with the callback from rust server
      *
      * @param callBack callBack

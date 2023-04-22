@@ -97,7 +97,7 @@ public class GlobalTransactionAspect {
      * but I due to the Spring AOP limitation, only the first annotated method will be intercepted,
      * so I decide to ignore the rollBack info which already been set.
      * But if multiple thread has been created in one request and parallel execute,
-     * this threadLocal won't work。InheritableThreadLocal may cause this problem,
+     * this threadLocal won't work。InheritableThreadLocal may solve this problem,
      * so decide to separate each thread instead of request to do the transaction.
      *
      * @param annotation 注释
