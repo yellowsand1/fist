@@ -2,6 +2,7 @@ package org.chad.notFound.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
 import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.configuration.FistProperties;
@@ -21,11 +22,13 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,6 +121,16 @@ public class FistCoreServiceImpl implements IFistCoreService {
         }
     }
 
+    private static final ConnectionProvider connectionProvider = ConnectionProvider.builder("fist-provider")
+            .maxConnections(50)
+            .pendingAcquireMaxCount(-1)
+            .pendingAcquireTimeout(Duration.ofMillis(45000))
+            .build();
+    private static final HttpClient httpClient = HttpClient.create(connectionProvider)
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
+            .responseTimeout(Duration.ofMillis(15000))
+            .keepAlive(true);
+
     /**
      * async send the info of transaction to rust server now
      *
@@ -136,7 +149,7 @@ public class FistCoreServiceImpl implements IFistCoreService {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-        HttpClient.create()
+        httpClient
                 .headers(httpHeaders -> headers.forEach(httpHeaders::set))
                 .post()
                 .uri(fistServerAddr)
