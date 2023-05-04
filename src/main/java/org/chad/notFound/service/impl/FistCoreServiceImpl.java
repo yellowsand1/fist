@@ -7,32 +7,24 @@ import lombok.extern.slf4j.Slf4j;
 import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.configuration.FistProperties;
 import org.chad.notFound.constant.FistConstant;
+import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.model.RollBackInfo;
-import org.chad.notFound.model.RollBackSql;
 import org.chad.notFound.model.Sql;
 import org.chad.notFound.model.SyncInfo;
-import org.chad.notFound.model.vo.CallBack;
 import org.chad.notFound.service.IFistCoreService;
 import org.chad.notFound.threadLocal.FistThreadLocal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.jdbc.datasource.DataSourceUtils;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -47,11 +39,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FistCoreServiceImpl implements IFistCoreService {
     private FistProperties fistProperties;
-    private DataSource dataSource;
+    private FistLock fistLock;
 
     @Autowired
-    public void setDataSource(DataSource dataSource) {
-        this.dataSource = dataSource;
+    public void setFistLock(FistLock fistLock) {
+        this.fistLock = fistLock;
     }
 
     @Autowired
@@ -66,7 +58,7 @@ public class FistCoreServiceImpl implements IFistCoreService {
      * @param thrown exception
      */
     @Override
-    public void recordSql(List<Sql> sql, Throwable thrown) {
+    public void recordSql(List<Sql> sql, Throwable thrown, String group) {
         sql.forEach(Sql::generateRollBackSql);
         RollBackInfo rollBackInfo = GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.get();
         SyncInfo syncInfo = new SyncInfo();
@@ -74,61 +66,20 @@ public class FistCoreServiceImpl implements IFistCoreService {
         syncInfo.setRollbackSql(sql.stream().map(Sql::getRollBackSql).collect(Collectors.toList()));
         syncInfo.setEnd(FistThreadLocal.BASE.get() == null || FistThreadLocal.BASE.get());
         syncInfo.setFistId(FistThreadLocal.TRACE_ID.get());
+        syncInfo.setGroup(group);
         //Now I guess it's time to send the syncInfo to rust server
         asyncSend(syncInfo);
     }
 
-    /**
-     * deal with the callback from rust server
-     *
-     * @param callBack callBack
-     */
-    @Async
-    @Override
-    public CompletableFuture<Void> dealCallBack(CallBack callBack) {
-        long l = System.currentTimeMillis();
-        log.debug("roll back demand from fist server,fistId: {}", callBack.getFistId());
-        for (RollBackSql rollBackSql : callBack.getRollBackSql()) {
-            executeRollBack(rollBackSql);
-        }
-        log.debug("roll back success,cost: {} ms", System.currentTimeMillis() - l);
-        return CompletableFuture.completedFuture(null);
-    }
-
-    public static final ThreadLocal<String> ROLLBACK = new ThreadLocal<>();
-
-    /**
-     * execute the rollback sql
-     *
-     * @param rollBackSql rollBackSql
-     */
-    @Override
-    public void executeRollBack(RollBackSql rollBackSql) {
-        ROLLBACK.set("rollback");
-        String sql = rollBackSql.getSql();
-        try (Connection conn = DataSourceUtils.getConnection(dataSource)) {
-            PreparedStatement preparedStatement = conn.prepareStatement(sql);
-            for (List<Object> param : rollBackSql.getParams()) {
-                for (int i = 0; i < param.size(); i++) {
-                    preparedStatement.setObject(i + 1, param.get(i));
-                }
-                preparedStatement.execute();
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("execute rollback sql error", e);
-        } finally {
-            ROLLBACK.remove();
-        }
-    }
-
-    private static final ConnectionProvider connectionProvider = ConnectionProvider.builder("fist-provider")
-            .maxConnections(50)
-            .pendingAcquireMaxCount(-1)
-            .pendingAcquireTimeout(Duration.ofMillis(45000))
-            .build();
-    private static final HttpClient httpClient = HttpClient.create(connectionProvider)
+    private static final HttpClient httpClient = HttpClient
+            .create(ConnectionProvider
+                    .builder("fist-provider")
+                    .maxConnections(50)
+                    .pendingAcquireMaxCount(-1)
+                    .pendingAcquireTimeout(Duration.ofMillis(45000))
+                    .build())
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)
-            .responseTimeout(Duration.ofMillis(15000))
+            .disableRetry(false).responseTimeout(Duration.ofMillis(15000))
             .keepAlive(true);
 
     /**
@@ -151,15 +102,14 @@ public class FistCoreServiceImpl implements IFistCoreService {
         }
         httpClient
                 .headers(httpHeaders -> headers.forEach(httpHeaders::set))
-                .post()
-                .uri(fistServerAddr)
+                .post().uri(fistServerAddr)
                 .send(ByteBufFlux.fromString(Mono.just(json)))
-                .responseContent()
-                .aggregate()
-                .asString()
-                .subscribe(response -> {
-                    log.debug("async send info to fist server success, response: {}", response);
-                });
+                .response()
+                .doOnError(Throwable.class, throwable -> {
+                    log.error("async send info to fist server error, error: {}", throwable.getMessage());
+                    fistLock.unlock(syncInfo.getGroup());
+                })
+                .subscribe(response -> log.debug("async send info to fist server success, response: {}", response));
     }
 
     /**

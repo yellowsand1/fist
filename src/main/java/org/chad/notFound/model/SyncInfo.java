@@ -24,6 +24,7 @@ public class SyncInfo {
     private boolean rollback;
     private List<RollBackSql> rollbackSql;
     private boolean end;
+    private String group;
     private Integer servicePort;
 
     public SyncInfo() {

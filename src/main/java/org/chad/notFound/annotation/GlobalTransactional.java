@@ -19,6 +19,8 @@ public @interface GlobalTransactional {
      */
     String name() default "";
 
+    String group() default "globalGroup";
+
     /**
      * timeout
      *

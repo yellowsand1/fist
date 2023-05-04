@@ -7,6 +7,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.chad.notFound.annotation.GlobalTransactional;
 import org.chad.notFound.constant.FistConstant;
+import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.model.RollBackInfo;
 import org.chad.notFound.model.Sql;
 import org.chad.notFound.service.IFistCoreService;
@@ -33,6 +34,12 @@ public class GlobalTransactionAspect {
     public static final ThreadLocal<RollBackInfo> ROLL_BACK_THREAD_LOCAL = new ThreadLocal<>();
     public static final ThreadLocal<Boolean> CLOSEABLE = new ThreadLocal<>();
     private IFistCoreService coreService;
+    private FistLock fistLock;
+
+    @Autowired
+    public void setFistLock(FistLock fistLock) {
+        this.fistLock = fistLock;
+    }
 
     @Autowired
     public void setCoreService(IFistCoreService coreService) {
@@ -60,11 +67,13 @@ public class GlobalTransactionAspect {
         long l = System.currentTimeMillis();
         log.debug("GlobalTransactional base on fist begins");
         GlobalTransactional annotation = ((MethodSignature) pjp.getSignature()).getMethod().getAnnotation(GlobalTransactional.class);
-        processAnnotation(annotation);
+        String group = processAnnotation(annotation);
         Object res;
         Throwable thrown = null;
         CLOSEABLE.set(false);
         try {
+            fistLock.lock(group);
+            log.debug("---------------------------lock-------------------------------------");
             res = pjp.proceed();
         } catch (Throwable e) {
             thrown = e;
@@ -77,7 +86,7 @@ public class GlobalTransactionAspect {
             }
             List<Sql> sqlList = JdbcConnectionAspect.SQL_LIST.get();
             if (sqlList != null) {
-                coreService.recordSql(sqlList, thrown);
+                coreService.recordSql(sqlList, thrown, group);
             }
             CLOSEABLE.remove();
             for (Connection connection : connections) {
@@ -100,12 +109,12 @@ public class GlobalTransactionAspect {
      * this threadLocal won't work。InheritableThreadLocal may solve this problem,
      * so decide to separate each thread instead of request to do the transaction.
      *
-     * @param annotation 注释
+     * @param annotation annotation
      */
-    private void processAnnotation(GlobalTransactional annotation) {
+    private String processAnnotation(GlobalTransactional annotation) {
         RollBackInfo alreadyRollBackInfo = ROLL_BACK_THREAD_LOCAL.get();
         if (alreadyRollBackInfo != null) {
-            return;
+            return "";
         }
         Class<? extends Throwable>[] noRollbackForClazz = annotation.noRollbackFor();
         Class<? extends Throwable>[] rollbackForClazz = annotation.rollbackFor();
@@ -131,5 +140,6 @@ public class GlobalTransactionAspect {
         rollBackInfo.setNoRollbackFor(noRollbackFor);
         rollBackInfo.setRollbackFor(rollbackFor);
         ROLL_BACK_THREAD_LOCAL.set(rollBackInfo);
+        return annotation.group();
     }
 }

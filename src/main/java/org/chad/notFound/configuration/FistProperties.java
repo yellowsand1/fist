@@ -35,6 +35,6 @@ public class FistProperties {
     @Value("${fist.rpc.class.path:org.springframework.web.client.RestTemplate}")
     private String fistRpcClassPath;
     
-    @Value("${server.port:8080}")
+    @Value("${server.port:7000}")
     private Integer port;
 }

@@ -1,12 +1,9 @@
 package org.chad.notFound.service;
 
-import org.chad.notFound.model.RollBackSql;
 import org.chad.notFound.model.Sql;
 import org.chad.notFound.model.SyncInfo;
-import org.chad.notFound.model.vo.CallBack;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * core service
@@ -22,22 +19,7 @@ public interface IFistCoreService {
      * @param sql    sql
      * @param thrown exception
      */
-    void recordSql(List<Sql> sql, Throwable thrown);
-
-    /**
-     * deal with the callback from rust server
-     *
-     * @param callBack callBack
-     * @return {@link CompletableFuture}<{@link Void}>
-     */
-    CompletableFuture<Void> dealCallBack(CallBack callBack);
-
-    /**
-     * execute the rollback sql
-     *
-     * @param rollBackSql rollBackSql
-     */
-    void executeRollBack(RollBackSql rollBackSql);
+    void recordSql(List<Sql> sql, Throwable thrown,String group);
 
     /**
      * async send the info of transaction to rust server now

@@ -6,7 +6,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.chad.notFound.kit.SqlKit;
 import org.chad.notFound.model.Sql;
-import org.chad.notFound.service.impl.FistCoreServiceImpl;
+import org.chad.notFound.service.impl.CallbackServiceImpl;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -45,7 +45,7 @@ public class JdbcConnectionAspect {
         // original connection
         Connection connection = (Connection) joinPoint.proceed();
 
-        if (FistCoreServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
+        if (CallbackServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
             return connection;
         }
         // proxy of connection
@@ -118,13 +118,13 @@ public class JdbcConnectionAspect {
                     handleSql(sql);
                     return preparedStatement;
                 }
-                if (FistCoreServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
+                if (CallbackServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
                     return preparedStatement;
                 }
                 return Proxy.newProxyInstance(JdbcPreparedStatementHandler.class.getClassLoader(), new Class[]{PreparedStatement.class}, new JdbcPreparedStatementHandler(preparedStatement, sql));
             } else if ("createStatement".equals(methodName)) {
                 Statement statement = (Statement) method.invoke(connection, args);
-                if (FistCoreServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
+                if (CallbackServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
                     return statement;
                 }
                 return Proxy.newProxyInstance(JdbcConnectionHandler.class.getClassLoader(), new Class[]{Statement.class}, new JdbcStatementHandler(statement));

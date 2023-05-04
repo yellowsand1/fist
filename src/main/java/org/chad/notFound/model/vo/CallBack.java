@@ -21,4 +21,5 @@ public class CallBack {
     private String fistId;
     @JsonProperty("rollbackSql")
     private List<RollBackSql> rollBackSql;
+    private String group;
 }
