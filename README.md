@@ -88,6 +88,6 @@ To define the group to seperate different service group in one instance , this w
 
 U can implement org.chad.notFound.lock.FistLock to implement ur own lock and announce it as a Bean . By default I use a simple lock, which can only lock single instance. U can use a distribute lock to keep data consistency in distribute and multiple instance situation .
 
-Contact me :
+## Contact me :
 
 WeChat : ![IMG_0398](https://user-images.githubusercontent.com/9192351/236183935-0c3149ce-6a5a-4757-897f-161dcb9a914d.jpg)
