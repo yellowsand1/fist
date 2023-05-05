@@ -84,6 +84,8 @@ fist:
 
 Due to some SAGA mode that already exists can't promise data consistency ，U can make that happen using fist .
 
+Due to the lock in SAGA , the TCC mode is more effective , but SAGA maybe more reliable cause SAGA won't hold the connection till the transaction ends , less JDBC connection run out Exception .If there's no such high demand in data consistency , U can use SAGA and implement the lock interface by doing nothing to improve concurrency , or U can use different lock with different group , it's up to u .
+
 To define the group to seperate different service group in one instance , this will lock the instance untill globalTransaction finish . Every group using different lock ,same group in different instance don't relate .
 
 U can implement org.chad.notFound.lock.FistLock to implement ur own lock and announce it as a Bean . By default I use a simple lock, which can only lock single instance. U can use a distribute lock to keep data consistency in distribute and multiple instance situation .
