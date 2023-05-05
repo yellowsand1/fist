@@ -23,9 +23,8 @@ import java.util.List;
  * @Description: callback service impl
  * @Version: 1.0
  */
-@Service
 @Slf4j
-public class CallbackServiceImpl implements ICallbackService {
+public class SagaCallbackServiceImpl implements ICallbackService {
     private DataSource dataSource;
     private FistLock fistLock;
     @Autowired
@@ -55,6 +54,16 @@ public class CallbackServiceImpl implements ICallbackService {
         }
     }
 
+    /**
+     * don't need to rollback
+     *
+     * @param callBack callBack
+     */
+    @Override
+    public void ok(CallBack callBack) {
+        fistLock.unlock(callBack.getGroup());
+    }
+
     public static final ThreadLocal<String> ROLLBACK = new ThreadLocal<>();
 
     /**
@@ -62,8 +71,7 @@ public class CallbackServiceImpl implements ICallbackService {
      *
      * @param rollBackSql rollBackSql
      */
-    @Override
-    public void executeRollBack(RollBackSql rollBackSql) {
+    private void executeRollBack(RollBackSql rollBackSql) {
         ROLLBACK.set("rollback");
         String sql = rollBackSql.getSql();
         try (Connection conn = DataSourceUtils.getConnection(dataSource)) {

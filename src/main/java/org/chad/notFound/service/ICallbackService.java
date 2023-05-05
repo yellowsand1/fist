@@ -1,6 +1,5 @@
 package org.chad.notFound.service;
 
-import org.chad.notFound.model.RollBackSql;
 import org.chad.notFound.model.vo.CallBack;
 
 /**
@@ -13,16 +12,17 @@ import org.chad.notFound.model.vo.CallBack;
  */
 public interface ICallbackService {
     /**
-     * deal with the callback from rust server
+     * deal with the callback from rust server,saga mode
      *
      * @param callBack callBack
      */
     void dealCallBack(CallBack callBack);
 
     /**
-     * execute the rollback sql
+     * don't need to rollback
      *
-     * @param rollBackSql rollBackSql
+     * @param callBack callBack
      */
-    void executeRollBack(RollBackSql rollBackSql);
+    void ok(CallBack callBack);
+
 }

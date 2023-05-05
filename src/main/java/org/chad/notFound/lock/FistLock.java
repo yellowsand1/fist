@@ -10,12 +10,16 @@ public interface FistLock {
     /**
      * lock
      * needs to be a synchronized method !
+     *
+     * @param group group
      */
     void lock(String group);
 
     /**
      * unlock
      * can't be a synchronized method due to competition with lock method
+     *
+     * @param group group
      */
     void unlock(String group);
 
@@ -23,6 +27,7 @@ public interface FistLock {
      * check if locked
      * needs to be synchronized method !
      *
+     * @param group group
      * @return true if locked
      */
     boolean locked(String group);
@@ -41,7 +46,8 @@ public interface FistLock {
                     if (interval > 15000 || System.currentTimeMillis() - l > 15000) {
                         throw new RuntimeException("global lock timeout");
                     }
-                    Thread.sleep(interval << 1);
+                    interval <<= 1;
+                    Thread.sleep(interval);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }

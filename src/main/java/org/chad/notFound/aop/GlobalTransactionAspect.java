@@ -7,14 +7,11 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.chad.notFound.annotation.GlobalTransactional;
 import org.chad.notFound.constant.FistConstant;
-import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.model.RollBackInfo;
-import org.chad.notFound.model.Sql;
-import org.chad.notFound.service.IFistCoreService;
+import org.chad.notFound.service.IFistAspectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,17 +30,10 @@ import java.util.List;
 public class GlobalTransactionAspect {
     public static final ThreadLocal<RollBackInfo> ROLL_BACK_THREAD_LOCAL = new ThreadLocal<>();
     public static final ThreadLocal<Boolean> CLOSEABLE = new ThreadLocal<>();
-    private IFistCoreService coreService;
-    private FistLock fistLock;
-
+    private IFistAspectService fistAspectService;
     @Autowired
-    public void setFistLock(FistLock fistLock) {
-        this.fistLock = fistLock;
-    }
-
-    @Autowired
-    public void setCoreService(IFistCoreService coreService) {
-        this.coreService = coreService;
+    public void setFistAspectService(IFistAspectService fistAspectService) {
+        this.fistAspectService = fistAspectService;
     }
 
     /**
@@ -64,40 +54,10 @@ public class GlobalTransactionAspect {
      */
     @Around("@annotation(org.chad.notFound.annotation.GlobalTransactional)")
     public Object handleGlobalTransaction(ProceedingJoinPoint pjp) throws Throwable {
-        long l = System.currentTimeMillis();
         log.debug("GlobalTransactional base on fist begins");
         GlobalTransactional annotation = ((MethodSignature) pjp.getSignature()).getMethod().getAnnotation(GlobalTransactional.class);
         String group = processAnnotation(annotation);
-        Object res;
-        Throwable thrown = null;
-        CLOSEABLE.set(false);
-        try {
-            fistLock.lock(group);
-            log.debug("---------------------------lock-------------------------------------");
-            res = pjp.proceed();
-        } catch (Throwable e) {
-            thrown = e;
-            throw e;
-        } finally {
-            List<Connection> connections = JdbcConnectionAspect.CONNECTIONS.get();
-            JdbcConnectionAspect.CONNECTIONS.remove();
-            if (connections == null) {
-                throw new RuntimeException("connection is null,may not support this orm");
-            }
-            List<Sql> sqlList = JdbcConnectionAspect.SQL_LIST.get();
-            if (sqlList != null) {
-                coreService.recordSql(sqlList, thrown, group);
-            }
-            CLOSEABLE.remove();
-            for (Connection connection : connections) {
-                if (connection != null) {
-                    connection.commit();
-                    connection.close();
-                }
-            }
-            log.debug("GlobalTransactional base on fist ends, cost {} ms", System.currentTimeMillis() - l);
-        }
-        return res;
+        return fistAspectService.doOnIntercept(pjp, group);
     }
 
     /**

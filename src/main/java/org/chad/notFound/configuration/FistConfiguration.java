@@ -9,6 +9,12 @@ import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.rpc.consumer.TraceFilter;
 import org.chad.notFound.rpc.provider.FistFeignInterceptor;
 import org.chad.notFound.rpc.provider.RestTemplateRpcAspect;
+import org.chad.notFound.service.ICallbackService;
+import org.chad.notFound.service.IFistAspectService;
+import org.chad.notFound.service.impl.FistSagaServiceImpl;
+import org.chad.notFound.service.impl.FistTccServiceImpl;
+import org.chad.notFound.service.impl.SagaCallbackServiceImpl;
+import org.chad.notFound.service.impl.TccCallbackServiceImpl;
 import org.chad.notFound.threadFactory.FistThreadFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -93,5 +99,29 @@ public class FistConfiguration {
     @ConditionalOnMissingBean
     public FistLock fistLock() {
         return new FistGlobalLock();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "fist.mode", havingValue = "saga")
+    public IFistAspectService fistSagaAspectService() {
+        return new FistSagaServiceImpl();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "fist.mode", havingValue = "tcc")
+    public IFistAspectService fistTccAspectService() {
+        return new FistTccServiceImpl();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "fist.mode", havingValue = "saga")
+    public ICallbackService callbackSagaService(){
+        return new SagaCallbackServiceImpl();
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "fist.mode", havingValue = "tcc")
+    public ICallbackService callbackTccService(){
+        return new TccCallbackServiceImpl();
     }
 }

@@ -13,5 +13,5 @@ public class FistConstant {
     public static final int FIST_AOP_ORDER = 500;
     public static final int FIST_RUNNER_ORDER = 500;
     public static final int FIST_FILTER_ORDER = 500;
-    public static final String FIST_SERVER_PATH = "/fist/core";
+    public static final String FIST_PATH = "/fist/core";
 }

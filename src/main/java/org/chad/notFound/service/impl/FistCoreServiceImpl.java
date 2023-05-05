@@ -7,10 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.configuration.FistProperties;
 import org.chad.notFound.constant.FistConstant;
-import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.model.RollBackInfo;
 import org.chad.notFound.model.Sql;
 import org.chad.notFound.model.SyncInfo;
+import org.chad.notFound.model.vo.CallBack;
+import org.chad.notFound.service.ICallbackService;
 import org.chad.notFound.service.IFistCoreService;
 import org.chad.notFound.threadLocal.FistThreadLocal;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +22,12 @@ import reactor.netty.ByteBufFlux;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.resources.ConnectionProvider;
 
+import java.sql.Connection;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -39,11 +42,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FistCoreServiceImpl implements IFistCoreService {
     private FistProperties fistProperties;
-    private FistLock fistLock;
+    private ICallbackService callbackService;
+    public static final Map<String, List<Connection>> CONNECTION_MAP = new ConcurrentHashMap<>(16);
 
     @Autowired
-    public void setFistLock(FistLock fistLock) {
-        this.fistLock = fistLock;
+    public void setCallbackService(ICallbackService callbackService) {
+        this.callbackService = callbackService;
     }
 
     @Autowired
@@ -71,6 +75,24 @@ public class FistCoreServiceImpl implements IFistCoreService {
         asyncSend(syncInfo);
     }
 
+    /**
+     * process connection for tcc mode
+     *
+     * @param conns  connections
+     * @param thrown exception
+     * @param group  group
+     */
+    @Override
+    public void recordConn(List<Connection> conns, Throwable thrown, String group) {
+        CONNECTION_MAP.put(FistThreadLocal.TRACE_ID.get(), conns);
+        SyncInfo syncInfo = new SyncInfo();
+        syncInfo.setGroup(group)
+                .setEnd(FistThreadLocal.BASE.get() == null || FistThreadLocal.BASE.get())
+                .setFistId(FistThreadLocal.TRACE_ID.get())
+                .setRollback(needsRollBack(thrown, GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.get()));
+        asyncSend(syncInfo);
+    }
+
     private static final HttpClient httpClient = HttpClient
             .create(ConnectionProvider
                     .builder("fist-provider")
@@ -89,7 +111,7 @@ public class FistCoreServiceImpl implements IFistCoreService {
      */
     @Override
     public void asyncSend(SyncInfo syncInfo) {
-        String fistServerAddr = "http://" + fistProperties.getFistServerAddr() + ":" + fistProperties.getFistServerPort() + FistConstant.FIST_SERVER_PATH;
+        String fistServerAddr = "http://" + fistProperties.getFistServerAddr() + ":" + fistProperties.getFistServerPort() + FistConstant.FIST_PATH;
         HttpHeaders headers = getHeaders();
         Map<String, SyncInfo> body = new HashMap<>(1);
         body.put("syncInfo", syncInfo);
@@ -107,7 +129,7 @@ public class FistCoreServiceImpl implements IFistCoreService {
                 .response()
                 .doOnError(Throwable.class, throwable -> {
                     log.error("async send info to fist server error, error: {}", throwable.getMessage());
-                    fistLock.unlock(syncInfo.getGroup());
+                    callbackService.ok(new CallBack().setFistId(syncInfo.getFistId()).setGroup(syncInfo.getGroup()));
                 })
                 .subscribe(response -> log.debug("async send info to fist server success, response: {}", response));
     }
