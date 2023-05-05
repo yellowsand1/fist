@@ -32,8 +32,7 @@ fist:
       url: jdbc:mysql://127.0.0.1:3306/fist?zeroDateTimeBehavior=CONVERT_TO_NULL&serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useOldAliasMetadataBehavior=true&useSSL=false&rewriteBatchedStatements=true
       username: root
       password: @@@@@@
-  tcc:
-    enable: true
+  mode: tcc
 ```
 
 U can config different database even different type of dataSource in ur distribute project ! Replace tcc to saga to enable saga mode
@@ -71,8 +70,7 @@ Now it's all done , try globalTransaction .
 
 ```java
 fist:
-  tcc:
-    enable: true
+  mode: tcc
 ```
 
 just simple like that !
@@ -81,8 +79,7 @@ just simple like that !
 
 ```java
 fist:
-  tcc:
-    enable: true
+  mode: saga
 ```
 
 Due to some SAGA mode that already exists can't promise data consistency ，U can make that happen using fist .
