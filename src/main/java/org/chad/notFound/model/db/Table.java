@@ -3,6 +3,7 @@ package org.chad.notFound.model.db;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -15,7 +16,8 @@ import java.util.List;
  */
 @Data
 @Accessors(chain = true)
-public class Table {
+public class Table implements Serializable {
+    private static final long serialVersionUID = -7017380568046336672L;
     private String tableName;
     private List<Column> columnList;
     private List<String> primaryKeyList;

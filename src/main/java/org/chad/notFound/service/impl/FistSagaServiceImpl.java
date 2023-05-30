@@ -2,12 +2,12 @@ package org.chad.notFound.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.aop.JdbcConnectionAspect;
 import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.model.Sql;
 import org.chad.notFound.service.IFistAspectService;
 import org.chad.notFound.service.IFistCoreService;
+import org.chad.notFound.threadLocal.FistThreadLocal;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.sql.Connection;
@@ -35,6 +35,7 @@ public class FistSagaServiceImpl implements IFistAspectService {
     public void setCoreService(IFistCoreService coreService) {
         this.coreService = coreService;
     }
+
     /**
      * do on intercept
      *
@@ -48,7 +49,7 @@ public class FistSagaServiceImpl implements IFistAspectService {
         Throwable thrown = null;
         long l = System.currentTimeMillis();
         try {
-            GlobalTransactionAspect.CLOSEABLE.set(false);
+            FistThreadLocal.IN_TRANSACTION.set(false);
             fistLock.lock(group);
             log.debug("---------------------------lock-------------------------------------");
             res = pjp.proceed();
@@ -59,13 +60,24 @@ public class FistSagaServiceImpl implements IFistAspectService {
             List<Connection> connections = JdbcConnectionAspect.CONNECTIONS.get();
             JdbcConnectionAspect.CONNECTIONS.remove();
             if (connections == null) {
+                FistThreadLocal.IN_TRANSACTION.remove();
                 throw new RuntimeException("connection is null,may not support this orm");
             }
             List<Sql> sqlList = JdbcConnectionAspect.SQL_LIST.get();
             if (sqlList != null) {
-                coreService.recordSql(sqlList, thrown, group);
+                try {
+                    coreService.recordSql(sqlList, thrown, group);
+                } catch (Exception e) {
+                    log.error("fist saga error", e);
+                    throw new RuntimeException(e);
+                } finally {
+                    FistThreadLocal.IN_TRANSACTION.remove();
+                }
+            } else {
+                log.debug("---------------------------unlock-------------------------------------");
+                fistLock.unlock(group);
             }
-            GlobalTransactionAspect.CLOSEABLE.remove();
+            FistThreadLocal.IN_TRANSACTION.remove();
             for (Connection connection : connections) {
                 if (connection != null) {
                     connection.commit();

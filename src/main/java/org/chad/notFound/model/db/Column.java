@@ -3,6 +3,8 @@ package org.chad.notFound.model.db;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
+
 /**
  * @BelongsProject: fistProject
  * @BelongsPackage: org.chad.notFound.model
@@ -13,6 +15,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class Column {
+public class Column implements Serializable {
+    private static final long serialVersionUID = -32904844895777485L;
     private String columnName;
 }

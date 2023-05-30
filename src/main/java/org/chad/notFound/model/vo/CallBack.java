@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 import org.chad.notFound.model.RollBackSql;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -17,7 +18,8 @@ import java.util.List;
  */
 @Data
 @Accessors(chain = true)
-public class CallBack {
+public class CallBack implements Serializable {
+    private static final long serialVersionUID = -330943338861791544L;
     private String fistId;
     @JsonProperty("rollbackSql")
     private List<RollBackSql> rollBackSql;

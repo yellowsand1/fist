@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -17,7 +18,8 @@ import java.util.List;
 @Data
 @EqualsAndHashCode
 @Accessors(chain = true)
-public class RollBackInfo {
+public class RollBackInfo implements Serializable {
+    private static final long serialVersionUID = 628674163228343231L;
     private List<Class> rollbackFor;
     private List<Class> noRollbackFor;
 }

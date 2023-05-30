@@ -43,7 +43,7 @@ public interface FistLock {
             long interval = 1;
             while (locked(group)) {
                 try {
-                    if (interval > 15000 || System.currentTimeMillis() - l > 15000) {
+                    if (interval > 5000 || System.currentTimeMillis() - l > 15000) {
                         throw new RuntimeException("global lock timeout");
                     }
                     interval <<= 1;

@@ -1,6 +1,5 @@
 package org.chad.notFound.rpc.consumer;
 
-import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.aop.JdbcConnectionAspect;
 import org.chad.notFound.constant.FistConstant;
 import org.chad.notFound.threadLocal.FistThreadLocal;
@@ -47,7 +46,7 @@ public class TraceFilter extends OncePerRequestFilter {
             //remove the other two threadLocal after every request
             //regardless of whether the request is a base request or not
             //because I send everything I need to the rust server
-            GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.remove();
+            FistThreadLocal.ROLLBACK_INFO.remove();
             JdbcConnectionAspect.SQL_LIST.remove();
         }
     }

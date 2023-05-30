@@ -1,13 +1,14 @@
 package org.chad.notFound.service.impl;
 
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.model.RollBackSql;
 import org.chad.notFound.model.vo.CallBack;
 import org.chad.notFound.service.ICallbackService;
+import org.chad.notFound.threadLocal.FistThreadLocal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.datasource.DataSourceUtils;
-import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -61,31 +62,38 @@ public class SagaCallbackServiceImpl implements ICallbackService {
      */
     @Override
     public void ok(CallBack callBack) {
+        log.debug("---------------------------unlock-------------------------------------");
         fistLock.unlock(callBack.getGroup());
     }
-
-    public static final ThreadLocal<String> ROLLBACK = new ThreadLocal<>();
 
     /**
      * execute the rollback sql
      *
      * @param rollBackSql rollBackSql
      */
+    @SneakyThrows
     private void executeRollBack(RollBackSql rollBackSql) {
-        ROLLBACK.set("rollback");
+        FistThreadLocal.ROLLBACK_ING.set("rollback");
         String sql = rollBackSql.getSql();
-        try (Connection conn = DataSourceUtils.getConnection(dataSource)) {
+        Connection conn = null;
+        try {
+            conn = DataSourceUtils.getConnection(dataSource);
+            conn.setAutoCommit(false);
             PreparedStatement preparedStatement = conn.prepareStatement(sql);
             for (List<Object> param : rollBackSql.getParams()) {
                 for (int i = 0; i < param.size(); i++) {
                     preparedStatement.setObject(i + 1, param.get(i));
                 }
-                preparedStatement.execute();
+                preparedStatement.addBatch();
             }
+            preparedStatement.executeBatch();
         } catch (SQLException e) {
+            conn.rollback();
             throw new RuntimeException("execute rollback sql error", e);
         } finally {
-            ROLLBACK.remove();
+            assert conn != null;
+            conn.commit();
+            FistThreadLocal.ROLLBACK_ING.remove();
         }
     }
 }

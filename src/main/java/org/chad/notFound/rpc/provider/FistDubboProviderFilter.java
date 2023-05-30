@@ -3,7 +3,6 @@ package org.chad.notFound.rpc.provider;
 import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.extension.Activate;
 import org.apache.dubbo.rpc.*;
-import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.aop.JdbcConnectionAspect;
 import org.chad.notFound.threadLocal.FistThreadLocal;
 
@@ -30,7 +29,7 @@ public class FistDubboProviderFilter implements Filter {
         invocation.getAttachments().put("fist", FistThreadLocal.TRACE_ID.get() == null ? UUID.randomUUID().toString() : FistThreadLocal.TRACE_ID.get());
         FistThreadLocal.TRACE_ID.remove();
         FistThreadLocal.BASE.remove();
-        GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.remove();
+        FistThreadLocal.ROLLBACK_INFO.remove();
         JdbcConnectionAspect.SQL_LIST.remove();
         return invoker.invoke(invocation);
     }

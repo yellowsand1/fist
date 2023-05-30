@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
-import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.configuration.FistProperties;
 import org.chad.notFound.constant.FistConstant;
 import org.chad.notFound.model.RollBackInfo;
@@ -64,7 +63,7 @@ public class FistCoreServiceImpl implements IFistCoreService {
     @Override
     public void recordSql(List<Sql> sql, Throwable thrown, String group) {
         sql.forEach(Sql::generateRollBackSql);
-        RollBackInfo rollBackInfo = GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.get();
+        RollBackInfo rollBackInfo = FistThreadLocal.ROLLBACK_INFO.get();
         SyncInfo syncInfo = new SyncInfo();
         syncInfo.setRollback(needsRollBack(thrown, rollBackInfo));
         syncInfo.setRollbackSql(sql.stream().map(Sql::getRollBackSql).collect(Collectors.toList()));
@@ -89,7 +88,7 @@ public class FistCoreServiceImpl implements IFistCoreService {
         syncInfo.setGroup(group)
                 .setEnd(FistThreadLocal.BASE.get() == null || FistThreadLocal.BASE.get())
                 .setFistId(FistThreadLocal.TRACE_ID.get())
-                .setRollback(needsRollBack(thrown, GlobalTransactionAspect.ROLL_BACK_THREAD_LOCAL.get()));
+                .setRollback(needsRollBack(thrown, FistThreadLocal.ROLLBACK_INFO.get()));
         asyncSend(syncInfo);
     }
 

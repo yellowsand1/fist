@@ -2,10 +2,10 @@ package org.chad.notFound.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.chad.notFound.aop.GlobalTransactionAspect;
 import org.chad.notFound.aop.JdbcConnectionAspect;
 import org.chad.notFound.service.IFistAspectService;
 import org.chad.notFound.service.IFistCoreService;
+import org.chad.notFound.threadLocal.FistThreadLocal;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.sql.Connection;
@@ -41,7 +41,7 @@ public class FistTccServiceImpl implements IFistAspectService {
         Throwable thrown = null;
         long l = System.currentTimeMillis();
         try {
-            GlobalTransactionAspect.CLOSEABLE.set(false);
+            FistThreadLocal.IN_TRANSACTION.set(false);
             res = pjp.proceed();
         } catch (Throwable e) {
             thrown = e;
@@ -50,10 +50,17 @@ public class FistTccServiceImpl implements IFistAspectService {
             List<Connection> connections = JdbcConnectionAspect.CONNECTIONS.get();
             JdbcConnectionAspect.CONNECTIONS.remove();
             if (connections == null) {
+                FistThreadLocal.IN_TRANSACTION.remove();
                 throw new RuntimeException("connection is null,may not support this orm");
             }
-            fistCoreService.recordConn(connections, thrown, group);
-            GlobalTransactionAspect.CLOSEABLE.remove();
+            try {
+                fistCoreService.recordConn(connections, thrown, group);
+            }catch (Exception e){
+                log.error("fist tcc doOnIntercept error",e);
+                throw new RuntimeException(e);
+            }finally {
+                FistThreadLocal.IN_TRANSACTION.remove();
+            }
             log.debug("GlobalTransactional base on fist ends, cost {} ms", System.currentTimeMillis() - l);
         }
         return res;

@@ -7,8 +7,10 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.chad.notFound.annotation.GlobalTransactional;
 import org.chad.notFound.constant.FistConstant;
+import org.chad.notFound.lock.FistLock;
 import org.chad.notFound.model.RollBackInfo;
 import org.chad.notFound.service.IFistAspectService;
+import org.chad.notFound.threadLocal.FistThreadLocal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 
@@ -28,9 +30,14 @@ import java.util.List;
 @Order(FistConstant.FIST_AOP_ORDER)
 @Slf4j
 public class GlobalTransactionAspect {
-    public static final ThreadLocal<RollBackInfo> ROLL_BACK_THREAD_LOCAL = new ThreadLocal<>();
-    public static final ThreadLocal<Boolean> CLOSEABLE = new ThreadLocal<>();
     private IFistAspectService fistAspectService;
+    private FistLock fistLock;
+
+    @Autowired
+    public void setFistLock(FistLock fistLock) {
+        this.fistLock = fistLock;
+    }
+
     @Autowired
     public void setFistAspectService(IFistAspectService fistAspectService) {
         this.fistAspectService = fistAspectService;
@@ -57,7 +64,16 @@ public class GlobalTransactionAspect {
         log.debug("GlobalTransactional base on fist begins");
         GlobalTransactional annotation = ((MethodSignature) pjp.getSignature()).getMethod().getAnnotation(GlobalTransactional.class);
         String group = processAnnotation(annotation);
-        return fistAspectService.doOnIntercept(pjp, group);
+        Object o;
+        try {
+            o = fistAspectService.doOnIntercept(pjp, group);
+        } catch (Exception e) {
+            fistLock.unlock(group);
+            log.debug("---------------------------lock-------------------------------------");
+            log.error("Fist process err, err: {}", e.getMessage());
+            throw e;
+        }
+        return o;
     }
 
     /**
@@ -72,7 +88,7 @@ public class GlobalTransactionAspect {
      * @param annotation annotation
      */
     private String processAnnotation(GlobalTransactional annotation) {
-        RollBackInfo alreadyRollBackInfo = ROLL_BACK_THREAD_LOCAL.get();
+        RollBackInfo alreadyRollBackInfo = FistThreadLocal.ROLLBACK_INFO.get();
         if (alreadyRollBackInfo != null) {
             return "";
         }
@@ -99,7 +115,7 @@ public class GlobalTransactionAspect {
         RollBackInfo rollBackInfo = new RollBackInfo();
         rollBackInfo.setNoRollbackFor(noRollbackFor);
         rollBackInfo.setRollbackFor(rollbackFor);
-        ROLL_BACK_THREAD_LOCAL.set(rollBackInfo);
+        FistThreadLocal.ROLLBACK_INFO.set(rollBackInfo);
         return annotation.group();
     }
 }

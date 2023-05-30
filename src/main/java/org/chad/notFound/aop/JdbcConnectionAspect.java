@@ -4,16 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.chad.notFound.kit.SqlKit;
 import org.chad.notFound.model.Sql;
-import org.chad.notFound.service.impl.SagaCallbackServiceImpl;
+import org.chad.notFound.threadLocal.FistThreadLocal;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,13 +42,13 @@ public class JdbcConnectionAspect {
         // original connection
         Connection connection = (Connection) joinPoint.proceed();
 
-        if (SagaCallbackServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
+        if (FistThreadLocal.ROLLBACK_ING.get() != null || FistThreadLocal.CLOSEABLE.get() != null) {
             return connection;
         }
         // proxy of connection
         // due to the proxy,the classloader of the proxy is different from the original connection
         // if the original connection take's different classloader, but I won't consider it now.
-        if (GlobalTransactionAspect.CLOSEABLE.get() != null) {
+        if (FistThreadLocal.IN_TRANSACTION.get() != null) {
             Object res = Proxy.newProxyInstance(JdbcConnectionAspect.class.getClassLoader(), new Class[]{Connection.class}, new JdbcConnectionHandler(connection));
             List<Connection> connections = CONNECTIONS.get();
             if (connections == null) {
@@ -78,7 +75,7 @@ public class JdbcConnectionAspect {
      *
      * @param sql sql
      */
-    public static void handleSql(String sql) {
+    private static void handleSql(String sql) {
         if (isUpdateSql(sql)) {
             List<Sql> sqls = SQL_LIST.get();
             if (sqls == null) {
@@ -118,26 +115,26 @@ public class JdbcConnectionAspect {
                     handleSql(sql);
                     return preparedStatement;
                 }
-                if (SagaCallbackServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
+                if (FistThreadLocal.ROLLBACK_ING.get() != null || FistThreadLocal.CLOSEABLE.get() != null) {
                     return preparedStatement;
                 }
                 return Proxy.newProxyInstance(JdbcPreparedStatementHandler.class.getClassLoader(), new Class[]{PreparedStatement.class}, new JdbcPreparedStatementHandler(preparedStatement, sql));
             } else if ("createStatement".equals(methodName)) {
                 Statement statement = (Statement) method.invoke(connection, args);
-                if (SagaCallbackServiceImpl.ROLLBACK.get() != null || SqlKit.CLOSEABLE.get() != null) {
+                if (FistThreadLocal.ROLLBACK_ING.get() != null || FistThreadLocal.CLOSEABLE.get() != null) {
                     return statement;
                 }
                 return Proxy.newProxyInstance(JdbcConnectionHandler.class.getClassLoader(), new Class[]{Statement.class}, new JdbcStatementHandler(statement));
             } else if ("close".equals(methodName)) {
-                if (GlobalTransactionAspect.CLOSEABLE.get() != null) {
+                if (FistThreadLocal.IN_TRANSACTION.get() != null && FistThreadLocal.ROLLBACK_ING.get() == null) {
                     return null;
                 }
             } else if ("commit".equals(methodName)) {
-                if (GlobalTransactionAspect.CLOSEABLE.get() != null) {
+                if (FistThreadLocal.IN_TRANSACTION.get() != null && FistThreadLocal.ROLLBACK_ING.get() == null) {
                     return null;
                 }
             } else if ("rollback".equals(methodName)) {
-                if (GlobalTransactionAspect.CLOSEABLE.get() != null) {
+                if (FistThreadLocal.IN_TRANSACTION.get() != null && FistThreadLocal.ROLLBACK_ING.get() == null) {
                     return null;
                 }
             }
@@ -180,7 +177,6 @@ public class JdbcConnectionAspect {
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             String methodName = method.getName();
-
             if (methodName.startsWith("set") && args.length == 2 && args[0] instanceof Integer) {
                 int parameterIndex = (Integer) args[0];
                 Object value = args[1];
@@ -188,8 +184,11 @@ public class JdbcConnectionAspect {
             } else if ("execute".equals(methodName) || "executeUpdate".equals(methodName) || "executeQuery".equals(methodName)) {
                 String filledSql = fillParameters(sql, parameters);
                 handleSql(filledSql);
+            } else if (methodName.startsWith("addBatch")) {
+                String filledSql = fillParameters(sql, parameters);
+                parameters.clear();
+                handleSql(filledSql);
             }
-
             return method.invoke(preparedStatement, args);
         }
 
@@ -201,7 +200,25 @@ public class JdbcConnectionAspect {
             for (int i = 0; i < sql.length(); i++) {
                 if (sql.charAt(i) == '?') {
                     filledSql.append(sql, lastIndex, i);
-                    filledSql.append(parameters.get(index));
+                    if (parameters.get(index) instanceof String) {
+                        filledSql.append('\'');
+                        filledSql.append(((String) parameters.get(index)));
+                        filledSql.append('\'');
+                    } else if (parameters.get(index) instanceof Date) {
+                        filledSql.append('\'');
+                        filledSql.append(parameters.get(index));
+                        filledSql.append('\'');
+                    } else if (parameters.get(index) instanceof Timestamp) {
+                        filledSql.append('\'');
+                        filledSql.append(parameters.get(index));
+                        filledSql.append('\'');
+                    } else if (parameters.get(index) instanceof Time) {
+                        filledSql.append('\'');
+                        filledSql.append(parameters.get(index));
+                        filledSql.append('\'');
+                    } else {
+                        filledSql.append(parameters.get(index));
+                    }
                     lastIndex = i + 1;
                     index++;
                 }

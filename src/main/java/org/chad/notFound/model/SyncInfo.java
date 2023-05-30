@@ -5,6 +5,7 @@ import lombok.experimental.Accessors;
 import org.chad.notFound.configuration.FistProperties;
 import org.chad.notFound.configuration.FistSpringContextHolder;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -19,7 +20,8 @@ import java.util.List;
  */
 @Data
 @Accessors(chain = true)
-public class SyncInfo {
+public class SyncInfo implements Serializable {
+    private static final long serialVersionUID = 1136632001612302881L;
     private String fistId;
     private boolean rollback;
     private List<RollBackSql> rollbackSql;

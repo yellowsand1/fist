@@ -3,8 +3,12 @@ package org.chad.notFound.model;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
-import org.chad.notFound.kit.SqlKit;
 import org.chad.notFound.model.enums.SqlType;
+import org.chad.notFound.sqlReverse.DeleteReverser;
+import org.chad.notFound.sqlReverse.InsertReverser;
+import org.chad.notFound.sqlReverse.UpdateReverser;
+
+import java.io.Serializable;
 
 /**
  * @BelongsProject: fistProject
@@ -17,7 +21,8 @@ import org.chad.notFound.model.enums.SqlType;
 @Data
 @EqualsAndHashCode
 @Accessors(chain = true)
-public class Sql {
+public class Sql implements Serializable {
+    private static final long serialVersionUID = -7944139693637720655L;
     private SqlType sqlType;
     private String sql;
     private RollBackSql rollBackSql;
@@ -46,13 +51,13 @@ public class Sql {
     public void generateRollBackSql() {
         switch (this.sqlType) {
             case INSERT:
-                this.rollBackSql = SqlKit.rollbackInsert(this.sql);
+                this.rollBackSql = new InsertReverser().generate(this.sql);
                 break;
             case UPDATE:
-                this.rollBackSql = SqlKit.rollbackUpdate(this.sql);
+                this.rollBackSql = new UpdateReverser().generate(this.sql);
                 break;
             case DELETE:
-                this.rollBackSql = SqlKit.rollbackDelete(this.sql);
+                this.rollBackSql = new DeleteReverser().generate(this.sql);
                 break;
             case SELECT:
                 break;

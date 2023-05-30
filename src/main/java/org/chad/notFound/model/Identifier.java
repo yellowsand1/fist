@@ -3,6 +3,8 @@ package org.chad.notFound.model;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
+
 /**
  * @BelongsProject: fistProject
  * @BelongsPackage: org.chad.notFound.model
@@ -14,6 +16,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-public class Identifier {
+public class Identifier implements Serializable {
+    private static final long serialVersionUID = 705571351668004486L;
     private String traceId;
 }

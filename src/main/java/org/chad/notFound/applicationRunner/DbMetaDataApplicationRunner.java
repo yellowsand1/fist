@@ -36,7 +36,7 @@ public class DbMetaDataApplicationRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         long l = System.currentTimeMillis();
-        log.debug("fist start to run configurations !");
+        log.debug("fist start to run !");
         String url = fistProperties.getFistTargetDatabaseUrl();
         String username = fistProperties.getFistTargetDatabaseUsername();
         String password = fistProperties.getFistTargetDatabasePassword();
