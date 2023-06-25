@@ -110,6 +110,7 @@ public class FistCoreServiceImpl implements IFistCoreService {
      */
     @Override
     public void asyncSend(SyncInfo syncInfo) {
+        syncInfo.setFistId(encrypt(syncInfo.getFistId()));
         String fistServerAddr = "http://" + fistProperties.getFistServerAddr() + ":" + fistProperties.getFistServerPort() + FistConstant.FIST_PATH;
         HttpHeaders headers = getHeaders();
         Map<String, SyncInfo> body = new HashMap<>(1);

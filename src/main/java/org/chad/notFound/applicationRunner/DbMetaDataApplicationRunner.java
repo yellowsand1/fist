@@ -42,7 +42,7 @@ public class DbMetaDataApplicationRunner implements ApplicationRunner {
         String password = fistProperties.getFistTargetDatabasePassword();
         try (Connection conn = DriverManager.getConnection(url, username, password)) {
             DatabaseMetaData metaData = conn.getMetaData();
-            ResultSet tables = metaData.getTables(getTableNameFromUrl(), null, null, new String[]{"TABLE"});
+            ResultSet tables = metaData.getTables(getDbNameFromUrl(), null, null, new String[]{"TABLE"});
             while (tables.next()) {
                 Table table = new Table();
                 String tableName = tables.getString("TABLE_NAME");
@@ -70,7 +70,7 @@ public class DbMetaDataApplicationRunner implements ApplicationRunner {
             log.debug("fist configuration finish , costs {} ms", System.currentTimeMillis() - l);
         }
     }
-    private String getTableNameFromUrl(){
+    private String getDbNameFromUrl(){
         String url = fistProperties.getFistTargetDatabaseUrl();
         String[] split = url.split("/");
         String last = split[3];

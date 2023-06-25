@@ -29,12 +29,6 @@ public class FistProperties {
     @Value("${fist.target.database.password}")
     private String fistTargetDatabasePassword;
 
-    @Value("${fist.rpc.method.name:doExecute}")
-    private String fistRpcMethodName;
-
-    @Value("${fist.rpc.class.path:org.springframework.web.client.RestTemplate}")
-    private String fistRpcClassPath;
-    
-    @Value("${server.port:7000}")
+    @Value("${server.port:8080}")
     private Integer port;
 }

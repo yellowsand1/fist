@@ -28,6 +28,7 @@ import java.util.List;
 public class SagaCallbackServiceImpl implements ICallbackService {
     private DataSource dataSource;
     private FistLock fistLock;
+
     @Autowired
     public void setFistLock(FistLock fistLock) {
         this.fistLock = fistLock;
@@ -46,6 +47,7 @@ public class SagaCallbackServiceImpl implements ICallbackService {
     @Override
     public void dealCallBack(CallBack callBack) {
         try {
+            callBack.setFistId(decrypt(callBack.getFistId()));
             for (RollBackSql rollBackSql : callBack.getRollBackSql()) {
                 executeRollBack(rollBackSql);
             }
@@ -62,8 +64,12 @@ public class SagaCallbackServiceImpl implements ICallbackService {
      */
     @Override
     public void ok(CallBack callBack) {
-        log.debug("---------------------------unlock-------------------------------------");
-        fistLock.unlock(callBack.getGroup());
+        try {
+            callBack.setFistId(decrypt(callBack.getFistId()));
+        } finally {
+            log.debug("---------------------------unlock-------------------------------------");
+            fistLock.unlock(callBack.getGroup());
+        }
     }
 
     /**

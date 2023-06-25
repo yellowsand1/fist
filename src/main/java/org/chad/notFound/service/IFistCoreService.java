@@ -19,6 +19,7 @@ public interface IFistCoreService {
      *
      * @param sql    sql
      * @param thrown exception
+     * @param group  lockGroup
      */
     void recordSql(List<Sql> sql, Throwable thrown,String group);
 
@@ -34,7 +35,17 @@ public interface IFistCoreService {
     /**
      * async send the info of transaction to rust server now
      *
-     * @param syncInfo 同步信息
+     * @param syncInfo syncInfo
      */
     void asyncSend(SyncInfo syncInfo);
+
+    /**
+     * encrypt data transfer to rust server
+     *
+     * @param data data
+     * @return {@link String}
+     */
+    default String encrypt(String data){
+        return data;
+    }
 }

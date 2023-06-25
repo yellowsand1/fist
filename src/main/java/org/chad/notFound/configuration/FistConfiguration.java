@@ -66,6 +66,7 @@ public class FistConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(name = "fist.mode", havingValue = "saga")
     public DbMetaDataApplicationRunner dbMetaDataApplicationRunner() {
         return new DbMetaDataApplicationRunner();
     }

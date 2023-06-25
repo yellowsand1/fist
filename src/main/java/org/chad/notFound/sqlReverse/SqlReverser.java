@@ -31,8 +31,6 @@ public abstract class SqlReverser {
         PASSWORD = fistProperties.getFistTargetDatabasePassword();
     }
 
-
-
     /**
      * generate rollback sql
      *
